@@ -30,7 +30,7 @@ class StructInfo(ObjectInfo):
 
     @parse_obj
     def get_struct_info(self, args):
-        if len(self.name) != 0:
+        if self.name:
             self.rest_of_string.append(
                 args.strings[args.str_num][args.pos + 1:]
             )
@@ -43,7 +43,7 @@ class StructInfo(ObjectInfo):
             self.access_modifier = change_access_modifier(self.access_modifier,
                                                           word)
         elif word == "struct":
-            if len(self.name) != 0:
+            if self.name:
                 raise WrongExpressionException
         elif word == "static":
             self.is_static = True
@@ -73,7 +73,7 @@ class StructInfo(ObjectInfo):
         self.structs.append(obj)
 
     def add_field(self, obj):
-        if len(obj.value) != 0:
+        if obj.value:
             raise WrongExpressionException
         self.fields.append(obj)
 
@@ -81,15 +81,7 @@ class StructInfo(ObjectInfo):
         self.methods.append(obj)
 
     def add_delegate(self, obj):
-        print(
-            f'Delegate {"".join(obj.data_type)} {obj.name} added to class '
-            f'{"".join(self.name)}'
-        )
         self.delegates.append(obj)
 
     def add_property(self, obj):
-        print(
-            f'Property {"".join(obj.data_type)} {obj.name} added to class '
-            f'{"".join(self.name)}'
-        )
         self.properties.append(obj)

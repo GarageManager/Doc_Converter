@@ -5,6 +5,7 @@ import Parser
 class CsprojParser:
     def __init__(self):
         self.path = ''
+        self.files = []
 
     def parse(self, path, encoding):
         self.path = path
@@ -22,4 +23,6 @@ class CsprojParser:
         for file_path in files:
             _, extension = os.path.splitext(file_path)
             if extension == '.cs':
-                _ = Parser.CsParser().parse_file(file_path, encoding)
+                files.append(Parser.CsParser().parse(file_path, encoding))
+
+        return files

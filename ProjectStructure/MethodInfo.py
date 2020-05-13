@@ -84,17 +84,17 @@ class MethodInfo(ObjectInfo):
                         if strings[i][j] == ')':
                             if start != j:
                                 arg.append(strings[i][start:j])
-                            if len(arg) != 0:
+                            if arg:
                                 self.args.append(arg)
 
-                            if strings[i][j + 1:] != '':
+                            if strings[i][j + 1:]:
                                 self.rest_of_string.append(strings[i][j + 1:])
                             self.rest_of_string.extend(strings[i + 1:])
                             return
                         if strings[i][j] == ',':
                             if start != j:
                                 arg.append(strings[i][start:j])
-                            if len(arg) != 0:
+                            if arg:
                                 self.args.append(arg)
                             arg = []
                             start = j + 1
@@ -167,7 +167,7 @@ class MethodInfo(ObjectInfo):
                 self.name.append(word)
                 return
 
-            if len(self.name) == 0:
+            if not self.name:
                 pos, self._angle_brackets_count = data_type_parser(
                     word, self.data_type, self._angle_brackets_count
                 )

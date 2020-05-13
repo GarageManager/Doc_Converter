@@ -1,3 +1,8 @@
+class WrongExtensionException(Exception):
+    def __str__(self):
+        return 'Wrong extension. Must be: .cs, .csproj, .sln.'
+
+
 class ParseException(Exception):
     pass
 

@@ -4,7 +4,8 @@ from Tools.Functions import parse_quotes, parse_brackets, is_field_checking
 from Tools.Exceptions import (NotAMethodException,
                               NotAPropertyException,
                               NotAFieldException,
-                              MissingBracketException)
+                              MissingBracketException,
+                              WrongExpressionException)
 from Tools import Regexes
 import ProjectStructure as PS
 
@@ -30,15 +31,14 @@ class CsParser:
         self.current_state = self.default_state
         self.skip_text = False
 
-    def parse_stdin(self, stdin):
-        self.parse('None', stdin)
+    def parse(self, path, encoding, std=None):
+        if std and not path:
+            return self.parse_data('None', std)
+        with open(path, mode="r", errors='replace',
+                  encoding=encoding) as file:
+            return self.parse_data(path, file)
 
-    def parse_file(self, path, encoding):
-        print(f'\n{path}\n')
-        with open(path, mode="r", errors='replace', encoding=encoding) as file:
-            self.parse(path, file)
-
-    def parse(self, name, file):
+    def parse_data(self, name, file):
         self.file_info = PS.FileInfo(name)
         self.curr_elem = self.file_info
         line = file.readline()
@@ -53,12 +53,12 @@ class CsParser:
         if self.bracket.count != 0:
             raise MissingBracketException()
         else:
-            return self.file_info
+            return [self.file_info, ]
 
     def parse_line(self, line):
         self.line_number += 1
         line = line.strip()
-        if len(line) == 0:
+        if not line:
             return
         if line[0] == '#':
             return
@@ -90,7 +90,7 @@ class CsParser:
                 elif (
                         not self.skip_text and
                         line[i] == '[' and
-                        len(self.previous_lines) == 0 and
+                        not self.previous_lines and
                         Regexes.IS_ATTRIBUTE_REGEX.match(
                             line[self.previous_pos: i + 1]
                         )
@@ -157,13 +157,16 @@ class CsParser:
         )
         if self.bracket.count == 0:
             self.previous_pos = args.pos + 1
-            self.current_state = self.default_state
+            if type(self.curr_elem) == PS.EnumInfo:
+                self.current_state = self.in_enum_state
+            else:
+                self.current_state = self.default_state
             self.skip_text = False
 
     # Skipping text until '*/'
     def in_comment_state(self, args):
-        if (args.pos != len(args.line) - 1
-                and args.line[args.pos:args.pos+2] == '*/'):
+        if (args.pos != len(args.line) - 1 and
+                args.line[args.pos:args.pos+2] == '*/'):
             self.current_state = self.default_state
             self.previous_pos = args.pos + 2
             self.skip_text = False
@@ -296,13 +299,17 @@ class CsParser:
                 self.previous_lines.append(
                     args.line[self.previous_pos:args.pos + 1]
                 )
+                self.curr_elem.add_enum_field(self.previous_lines)
                 self.previous_pos = args.pos + 1
             elif args.char == '}':
-                self.curr_elem.add_fields(self.previous_lines)
-                self.previous_lines = []
-                self.previous_pos = args.pos + 1
-                self.curr_elem = self.curr_elem.father
-                self.current_state = self.default_state
+                if self.previous_lines:
+                    self.curr_elem.add_enum_field(self.previous_lines)
+                    self.previous_lines = []
+                    self.previous_pos = args.pos + 1
+                    self.curr_elem = self.curr_elem.father
+                    self.current_state = self.default_state
+                else:
+                    raise WrongExpressionException
 
     def parse_element(self, xml):
         match = False
@@ -366,16 +373,16 @@ class CsParser:
             self.previous_pos = 0
 
     def end_of_line_checking(self, position, line):
-        if (position != len(line) - 1  # If not end of line
-                and position != 0
-                and self.previous_pos != position):
+        if (position != len(line) - 1 and  # If not end of line
+                position != 0 and
+                self.previous_pos != position):
             self.previous_lines.append(
                 line[self.previous_pos:position].strip()
             )
             self.previous_pos = position
         else:  # If end of line
-            if (self.previous_pos < len(line) - 1
-                    and self.previous_pos != position):
+            if (self.previous_pos < len(line) - 1 and
+                    self.previous_pos != position):
                 self.previous_lines.append(line[self.previous_pos: -1].strip())
             self.end_of_line = True
 
@@ -387,3 +394,6 @@ class CsParser:
             self.curr_elem.add_field(obj)
         elif type(obj) == PS.MethodInfo:
             self.curr_elem.add_method(obj)
+
+    def __str__(self):
+        return ''.join(str(self.curr_elem))

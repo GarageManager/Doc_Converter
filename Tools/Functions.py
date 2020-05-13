@@ -12,7 +12,7 @@ ACCESS_MODIFIERS_DICT = {
 }
 
 OPERATORS = ('!', '++', '--', '~', 'true', 'false', '+', '-', '*', '/', '%',
-             '&', '|', '^', '<<', '>>', '==', '!=','<', '>', '<=', '>=')
+             '&', '|', '^', '<<', '>>', '==', '!=', '<', '>', '<=', '>=')
 
 
 # Decorator for ProjectStructure classes
@@ -96,8 +96,8 @@ def change_access_modifier(curr_acc_mod, string):
           acc_mod is AccessModifiers.Protected):
         curr_acc_mod = AccessModifiers.PrivateProtected
     elif (
-            curr_acc_mod is AccessModifiers.Protected
-            and acc_mod is AccessModifiers.Internal
+            curr_acc_mod is AccessModifiers.Protected and
+            acc_mod is AccessModifiers.Internal
     ):
         curr_acc_mod = AccessModifiers.ProtectedInternal
     else:
@@ -112,7 +112,7 @@ def data_type_parser(word, data_type_string, brackets_count):
             not data_type_string and
             DATA_TYPE_REGEX1.match(word) or
             DATA_TYPE_REGEX2.match(word) and
-            (brackets_count != 0 or len(data_type_string) != 0 and
+            (brackets_count != 0 or data_type_string and
              (word[0] == "." or
               data_type_string[-1][-1] == "." or
               word[0] == "<" and
@@ -140,7 +140,7 @@ def get_generic_info(obj):
     for j in range(len(obj.name[0])):
         if obj.name[0][j] == '<':
             new_name = obj.name[0][:j]
-            if obj.name[0][j:] != '':
+            if obj.name[0][j:]:
                 obj.generic_info.append(obj.name[0][j:])
             obj.generic_info.extend(obj.name[0+1:])
             obj.name = new_name

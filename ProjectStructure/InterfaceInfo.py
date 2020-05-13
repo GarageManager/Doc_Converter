@@ -29,7 +29,7 @@ class InterfaceInfo(ObjectInfo):
 
     @parse_obj
     def get_interface_info(self, args):
-        if len(self.rest_of_string) != 0:
+        if self.rest_of_string:
             self.rest_of_string.append(
                 args.strings[args.str_num][args.pos + 1:]
             )
@@ -42,7 +42,7 @@ class InterfaceInfo(ObjectInfo):
             self.access_modifier = change_access_modifier(self.access_modifier,
                                                           word)
         elif word == 'interface':
-            if len(self.name) != 0:
+            if self.name:
                 raise WrongExpressionException
         elif word == 'partial':
             self.is_partial = True
@@ -54,41 +54,22 @@ class InterfaceInfo(ObjectInfo):
                 self.rest_of_string.append(word[pos:])
 
     def add_class(self, obj):
-        print(f'class {"".join(obj.name)} added to interface '
-              f'{"".join(self.name)}')
         self.classes.append(obj)
 
     def add_enum(self, obj):
-        print(f'enum {"".join(obj.name)} added to interface '
-              f'{"".join(self.name)}')
         self.enums.append(obj)
 
     def add_interface(self, obj):
-        print(f'interface {"".join(obj.name)} added to interface '
-              f'{"".join(self.name)}')
         self.interfaces.append(obj)
 
     def add_struct(self, obj):
-        print(f'struct {"".join(obj.name)} added to interface '
-              f'{"".join(self.name)}')
         self.structs.append(obj)
 
-    def add_field(self, obj):
-        raise WrongExpressionException
-
     def add_method(self, obj):
-        print(f'method {"".join(obj.name)} added to interface '
-              f'{"".join(self.name)}')
         self.methods.append(obj)
 
     def add_delegate(self, obj):
-        print(
-            f'Delegate {"".join(obj.data_type)} {obj.name} added to class '
-            f'{"".join(self.name)}'
-        )
         self.delegates.append(obj)
 
     def add_property(self, obj):
-        print(f'Property {"".join(obj.name)} added to class '
-              f'{"".join(self.name)}')
         self.properties.append(obj)

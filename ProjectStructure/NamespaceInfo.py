@@ -23,7 +23,7 @@ class NamespaceInfo(ObjectInfo):
 
     def word_parser(self, word):
         if word == "namespace":
-            if len(self.name) != 0:
+            if self.name:
                 raise WrongExpressionException
         elif NAME_REGEX.match(word):
             self.name.append(word)
@@ -31,28 +31,19 @@ class NamespaceInfo(ObjectInfo):
             raise WrongExpressionException
 
     def add_class(self, obj):
-        print(f'class {"".join(obj.name)} added to namespace {self.name}')
         self.classes.append(obj)
 
     def add_namespace(self, obj):
-        print(f"namespace {obj.name} added to namespace {self.name}")
         raise WrongExpressionException
 
     def add_enum(self, obj):
-        print(f"enum {obj.name} added to namespace {self.name}")
         self.enums.append(obj)
 
     def add_interface(self, obj):
-        print(f"interface {obj.name} added to namespace {self.name}")
         self.interfaces.append(obj)
 
     def add_struct(self, obj):
-        print(f"struct {obj.name} added to namespace {self.name}")
         self.structs.append(obj)
 
     def add_delegate(self, obj):
-        print(
-            f'Delegate {"".join(obj.data_type)} {obj.name} added to namespace '
-            f'{self.name}'
-        )
         self.delegates.append(obj)

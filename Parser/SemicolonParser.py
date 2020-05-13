@@ -57,7 +57,7 @@ class SemicolonParser:
 
                     if self.is_method:
                         return self.return_method(i, j + 1)
-                    if self.name != '':
+                    if self.name:
                         return self.return_field(i, j)
                     start = j + 1
 
@@ -71,25 +71,25 @@ class SemicolonParser:
                     if start != j:
                         self.word_parser(self.strings[i][start:j].strip())
                         j += 1
-                    if self.name != '':
+                    if self.name:
                         return self.return_field(i, j)
-                    else:
-                        raise NotAFieldException
+                    raise NotAFieldException
                 j += 1
 
             if start != j:
                 self.word_parser(self.strings[i][start:].strip())
                 if self.is_method:
                     return self.return_method(i, j)
-                elif self.name != '':
+                if self.name:
                     return self.return_field(i, j)
+        raise NotAFieldException
 
     def return_field(self, str_num, pos):
-        if self.name == '' or not self.data_type:
+        if not self.name or not self.data_type:
             raise NotAFieldException
         if self.is_delegate:
             return self.get_field_info()
-        if self.strings[str_num][pos:] != '':
+        if self.strings[str_num][pos:]:
             self.value.append(self.strings[str_num][pos:])
             self.value.extend(self.strings[str_num + 1:])
         return self.get_field_info()

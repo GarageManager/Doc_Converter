@@ -1,9 +1,9 @@
-from ProjectStructure.InterfaceInfo import InterfaceInfo as InterfaceInfo
-from ProjectStructure.NamespaceInfo import NamespaceInfo as NamespaceInfo
-from ProjectStructure.PropertyInfo import PropertyInfo as PropertyInfo
-from ProjectStructure.StructInfo import StructInfo as StructInfo
-from ProjectStructure.MethodInfo import MethodInfo as MethodInfo
-from ProjectStructure.ClassInfo import ClassInfo as ClassInfo
-from ProjectStructure.FieldInfo import FieldInfo as FieldInfo
-from ProjectStructure.EnumInfo import EnumInfo as EnumInfo
-from ProjectStructure.CsFileInfo import FileInfo as FileInfo
+from ProjectStructure.InterfaceInfo import InterfaceInfo
+from ProjectStructure.NamespaceInfo import NamespaceInfo
+from ProjectStructure.PropertyInfo import PropertyInfo
+from ProjectStructure.StructInfo import StructInfo
+from ProjectStructure.MethodInfo import MethodInfo
+from ProjectStructure.ClassInfo import ClassInfo
+from ProjectStructure.FieldInfo import FieldInfo
+from ProjectStructure.EnumInfo import EnumInfo
+from ProjectStructure.CsFileInfo import FileInfo
