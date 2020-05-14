@@ -17,7 +17,16 @@ ENUM_BRACKETS = {
 }
 
 
-class CsParser:
+def parse(path, encoding, std=None):
+    parser = Parser()
+    if std and not path:
+        return parser.parse_data('None', std)
+    with open(path, mode="r", errors='replace',
+              encoding=encoding) as file:
+        return parser.parse_data(path, file)
+
+
+class Parser:
     def __init__(self):
         self.file_info = None
         self.curr_elem = None
@@ -30,13 +39,6 @@ class CsParser:
         self.line_number = 0
         self.current_state = self.default_state
         self.skip_text = False
-
-    def parse(self, path, encoding, std=None):
-        if std and not path:
-            return self.parse_data('None', std)
-        with open(path, mode="r", errors='replace',
-                  encoding=encoding) as file:
-            return self.parse_data(path, file)
 
     def parse_data(self, name, file):
         self.file_info = PS.FileInfo(name)
@@ -188,18 +190,22 @@ class CsParser:
         self.previous_pos = args.pos + 1
 
     def property_begin_state(self, args):
-        match = Regexes.GET_REGEX.search(args.line[args.pos:])  # search 'get'
-        self.current_state = self.property_get_state
-        if not match:  # if 'get' isn't found
-            # try to find 'set'
-            match = Regexes.SET_REGEX.search(args.line[args.pos:])
-            self.current_state = self.property_set_state
+        get_match = Regexes.GET_REGEX.search(args.line[args.pos:])
+        set_match = Regexes.SET_REGEX.search(args.line[args.pos:])
 
-        if match:  # if at least one is found
+        if get_match or set_match:
             self.curr_elem.get_set_flag = True
-            self.previous_pos = args.pos + match.end()
-        else:  # if nothing is found then just skip brackets content
-            self.property_to_skip()
+            self.previous_pos = args.pos
+            if (not get_match or
+                    set_match and set_match.start() < get_match.start()):
+                self.current_state = self.property_set_state
+                self.previous_pos += set_match.end()
+            elif (not set_match or
+                  get_match and get_match.start() < set_match.start()):
+                self.current_state = self.property_get_state
+                self.previous_pos += get_match.end()
+        else:
+            raise WrongExpressionException
 
     def property_get_state(self, args):
         if args.pos < self.previous_pos:
@@ -209,7 +215,12 @@ class CsParser:
         elif args.char == '}':
             self.bracket.count -= 1
             if self.bracket.count == 0:
-                self.property_to_default(args.line, args.pos)
+                if args.line[self.previous_pos:args.pos]:
+                    self.previous_lines.append(
+                        args.line[self.previous_pos:args.pos]
+                    )
+                self.curr_elem.add_get_value(self.previous_lines)
+                self.property_to_default(args.pos)
         else:
             self.parse_property_body(args, 's')
 
@@ -221,7 +232,12 @@ class CsParser:
         elif args.char == '}':
             self.bracket.count -= 1
             if self.bracket.count == 0:
-                self.property_to_skip()
+                if args.line[self.previous_pos:args.pos]:
+                    self.previous_lines.append(
+                        args.line[self.previous_pos:args.pos]
+                    )
+                self.curr_elem.add_set_value(self.previous_lines)
+                self.property_to_default(args.pos)
         else:
             self.parse_property_body(args, 'g')
 
@@ -233,7 +249,12 @@ class CsParser:
         elif args.char == '}':
             self.bracket.count -= 1
             if self.bracket.count == 0:
-                self.property_to_default(args.line, args.pos)
+                if args.line[self.previous_pos:args.pos]:
+                    self.previous_lines.append(
+                        args.line[self.previous_pos:args.pos]
+                    )
+                self.curr_elem.add_value(self.previous_lines)
+                self.property_to_default(args.pos)
 
     def parse_property_body(self, args, g_or_s):
         if self.bracket.count == 1:
@@ -252,9 +273,10 @@ class CsParser:
                      args.line[args.pos + 3] == ' ' or
                      args.line[args.pos + 3] == ';')
             ):
-                self.previous_lines.append(
-                    args.line[self.previous_pos:args.pos]
-                )
+                if args.line[self.previous_pos:args.pos]:
+                    self.previous_lines.append(
+                        args.line[self.previous_pos:args.pos]
+                    )
                 if args.char == 'g':
                     self.curr_elem.add_set_value(self.previous_lines)
                 else:
@@ -265,21 +287,12 @@ class CsParser:
             else:
                 self.curr_elem.get_set_flag = False
 
-    def property_to_default(self, line, pos):
-        self.previous_lines.append(line[self.previous_pos:pos])
-        self.curr_elem.add_value(self.previous_lines)
+    def property_to_default(self, pos):
         self.previous_lines = []
         self.previous_pos = pos + 1
         self.current_state = self.default_state
         self.curr_elem.father.add_property(self.curr_elem)
         self.curr_elem = self.curr_elem.father
-
-    def property_to_skip(self):
-        self.previous_lines = []
-        self.previous_pos = 0
-        self.current_state = self.skip_text_state
-        self.curr_elem = self.curr_elem.father
-        self.skip_text = True
 
     # Enum items ends with ','
     def in_enum_state(self, args):
@@ -297,19 +310,21 @@ class CsParser:
         else:
             if args.char == ',':
                 self.previous_lines.append(
-                    args.line[self.previous_pos:args.pos + 1]
+                    args.line[self.previous_pos:args.pos]
                 )
-                self.curr_elem.add_enum_field(self.previous_lines)
+                self.curr_elem.add_enum_field(list(self.previous_lines))
+                self.previous_lines = []
                 self.previous_pos = args.pos + 1
             elif args.char == '}':
+                line = args.line[self.previous_pos:args.pos].strip()
+                if line:
+                    self.previous_lines.append(line)
                 if self.previous_lines:
                     self.curr_elem.add_enum_field(self.previous_lines)
-                    self.previous_lines = []
-                    self.previous_pos = args.pos + 1
-                    self.curr_elem = self.curr_elem.father
-                    self.current_state = self.default_state
-                else:
-                    raise WrongExpressionException
+                self.previous_lines = []
+                self.previous_pos = args.pos + 1
+                self.curr_elem = self.curr_elem.father
+                self.current_state = self.default_state
 
     def parse_element(self, xml):
         match = False
@@ -333,6 +348,14 @@ class CsParser:
                 t = PS.NamespaceInfo(self.curr_elem, self.previous_lines, xml)
                 self.curr_elem.add_namespace(t)
                 match = True
+            elif Regexes.IS_EVENT_REGEX.search(line):
+                self.curr_elem.add_event(
+                    PS.EventInfo(self.curr_elem, self.previous_lines, xml)
+                )
+                self.bracket = Bracket('{', '}', 1)
+                self.skip_text = True
+                self.current_state = self.skip_text_state
+                return
             elif Regexes.IS_STRUCT_REGEX.search(line):
                 t = PS.StructInfo(self.curr_elem, self.previous_lines, xml)
                 self.curr_elem.add_struct(t)
@@ -347,7 +370,7 @@ class CsParser:
                 self.current_state = self.skip_text_state
                 try:
                     self.curr_elem.add_method(
-                        PS.MethodInfo(self.curr_elem, xml, self.previous_lines)
+                        PS.MethodInfo(self.curr_elem, self.previous_lines, xml)
                     )
                 except NotAMethodException:  # If not a method then just skip
                     pass
@@ -356,7 +379,7 @@ class CsParser:
             self.bracket = Bracket('{', '}', 1)
             try:
                 self.curr_elem = PS.PropertyInfo(
-                    self.curr_elem, self.xml, self.previous_lines
+                    self.curr_elem, self.previous_lines, self.xml
                 )
                 self.current_state = self.property_begin_state
             except NotAPropertyException:
@@ -380,7 +403,7 @@ class CsParser:
                 line[self.previous_pos:position].strip()
             )
             self.previous_pos = position
-        else:  # If end of line
+        elif position == len(line) - 1:  # If end of line
             if (self.previous_pos < len(line) - 1 and
                     self.previous_pos != position):
                 self.previous_lines.append(line[self.previous_pos: -1].strip())
@@ -388,7 +411,9 @@ class CsParser:
 
     # Adding semicolon element to current father
     def add_semicolon(self, obj):
-        if obj.is_delegate:
+        if type(obj) == PS.EventInfo:
+            self.curr_elem.add_event(obj)
+        elif obj.is_delegate:
             self.curr_elem.add_delegate(obj)
         elif type(obj) == PS.FieldInfo:
             self.curr_elem.add_field(obj)

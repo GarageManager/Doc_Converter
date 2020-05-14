@@ -1,6 +1,6 @@
 from ProjectStructure.ObjectInfo import ObjectInfo
 from Tools.Enums import AccessModifiers
-from Tools.Exceptions import NotAPropertyException
+from Tools.Exceptions import NotAPropertyException, WrongExpressionException
 from Tools.Functions import (change_access_modifier, is_access_modifier,
                              parse_obj, data_type_parser)
 from Tools.Regexes import PROPERTY_NAME_REGEX1, PROPERTY_NAME_REGEX2
@@ -8,20 +8,18 @@ from Tools.Regexes import PROPERTY_NAME_REGEX1, PROPERTY_NAME_REGEX2
 SEPARATORS = (' ',)
 
 
-class PropertyInfo(ObjectInfo):
-    def __init__(self, father, property_str, xml):
+class EventInfo(ObjectInfo):
+    def __init__(self, father, event_str, xml):
         super().__init__(father, xml)
         self.data_type = []
         self.access_modifier = AccessModifiers.Empty
         self.is_static = False
-        self.get_value = []
-        self.set_value = []
 
         self.angle_brackets_count = 0
-        self.get_property_info(property_str, SEPARATORS)
+        self.get_event_info(event_str, SEPARATORS)
 
     @parse_obj
-    def get_property_info(self, args):
+    def get_event_info(self, args):
         pass
 
     def word_parser(self, word):
@@ -29,8 +27,12 @@ class PropertyInfo(ObjectInfo):
             self.access_modifier = change_access_modifier(self.access_modifier,
                                                           word)
             return
-        if word == "static":
+        if word == 'static':
             self.is_static = True
+            return
+        if word == 'event':
+            if self.name:
+                raise WrongExpressionException
             return
         if word == 'new':
             return
@@ -48,15 +50,3 @@ class PropertyInfo(ObjectInfo):
                 if not PROPERTY_NAME_REGEX2.match(word[pos:]):
                     raise NotAPropertyException
                 self.name.append(word[pos:])
-
-    def add_set_value(self, value):
-        self.set_value = [x for x in value]
-
-    def add_get_value(self, value):
-        self.get_value = [x for x in value]
-
-    def add_value(self, value):
-        if not self.get_value:
-            self.get_value = [x for x in value]
-        else:
-            self.set_value = [x for x in value]

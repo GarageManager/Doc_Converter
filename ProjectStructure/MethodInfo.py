@@ -38,7 +38,7 @@ class MethodProperties:
 
 
 class MethodInfo(ObjectInfo):
-    def __init__(self, father, xml, method_str, properties=MethodProperties()):
+    def __init__(self, father, method_str, xml, properties=MethodProperties()):
         super().__init__(father, xml)
         self.data_type = []
         if properties:

@@ -73,3 +73,6 @@ class InterfaceInfo(ObjectInfo):
 
     def add_property(self, obj):
         self.properties.append(obj)
+
+    def add_event(self, obj):
+        self.events.append(obj)

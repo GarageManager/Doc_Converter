@@ -17,6 +17,7 @@ class ObjectInfo:
         self.methods = []
         self.delegates = []
         self.properties = []
+        self.events = []
 
     def add_class(self, obj):
         raise WrongExpressionException
@@ -45,53 +46,60 @@ class ObjectInfo:
     def add_property(self, obj):
         raise WrongExpressionException
 
-    # def __str__(self):
-    #     counter = 0
-    #     father = self.father
-    #     while father:
-    #         father = father.father
-    #         counter += 2
-    #
-    #     name = ' '.join(self.name) if type(self.name) == list else self.name
-    #
-    #     strings = [f'{"  " * counter}{name}\n', ]
-    #     counter += 1
-    #
-    #     if self.namespaces:
-    #         strings.append(f'{"  " * counter}Classes:\n')
-    #         for i in self.namespaces:
-    #             strings.append(str(i))
-    #     if self.classes:
-    #         strings.append(f'{"  " * counter}Classes:\n')
-    #         for i in self.classes:
-    #             strings.append(str(i))
-    #     if self.interfaces:
-    #         strings.append(f'{"  " * counter}Interfaces:\n')
-    #         for i in self.interfaces:
-    #             strings.append(str(i))
-    #     if self.structs:
-    #         strings.append(f'{"  " * counter}Structs:\n')
-    #         for i in self.structs:
-    #             strings.append(str(i))
-    #     if self.enums:
-    #         strings.append(f'{"  " * counter}Enums:\n')
-    #         for i in self.enums:
-    #             strings.append(str(i))
-    #     if self.properties:
-    #         strings.append(f'{"  " * counter}Properties:\n')
-    #         for i in self.properties:
-    #             strings.append(str(i))
-    #     if self.fields:
-    #         strings.append(f'{"  " * counter}Fields:\n')
-    #         for i in self.fields:
-    #             strings.append(str(i))
-    #     if self.methods:
-    #         strings.append(f'{"  " * counter}Methods:\n')
-    #         for i in self.methods:
-    #             strings.append(str(i))
-    #     if self.delegates:
-    #         strings.append(f'{"  " * counter}Delegates:\n')
-    #         for i in self.delegates:
-    #             strings.append(str(i))
-    #
-    #     return ''.join(strings)
+    def add_event(self, obj):
+        raise WrongExpressionException
+
+    def __str__(self):
+        counter = 0
+        father = self.father
+        while father:
+            father = father.father
+            counter += 2
+
+        name = ' '.join(self.name) if type(self.name) == list else self.name
+
+        strings = [f'{"  " * counter}{name}\n', ]
+        counter += 1
+
+        if self.namespaces:
+            strings.append(f'{"  " * counter}Namespaces:\n')
+            for i in self.namespaces:
+                strings.append(str(i))
+        if self.classes:
+            strings.append(f'{"  " * counter}Classes:\n')
+            for i in self.classes:
+                strings.append(str(i))
+        if self.interfaces:
+            strings.append(f'{"  " * counter}Interfaces:\n')
+            for i in self.interfaces:
+                strings.append(str(i))
+        if self.structs:
+            strings.append(f'{"  " * counter}Structs:\n')
+            for i in self.structs:
+                strings.append(str(i))
+        if self.enums:
+            strings.append(f'{"  " * counter}Enums:\n')
+            for i in self.enums:
+                strings.append(str(i))
+        if self.properties:
+            strings.append(f'{"  " * counter}Properties:\n')
+            for i in self.properties:
+                strings.append(str(i))
+        if self.fields:
+            strings.append(f'{"  " * counter}Fields:\n')
+            for i in self.fields:
+                strings.append(str(i))
+        if self.methods:
+            strings.append(f'{"  " * counter}Methods:\n')
+            for i in self.methods:
+                strings.append(str(i))
+        if self.delegates:
+            strings.append(f'{"  " * counter}Delegates:\n')
+            for i in self.delegates:
+                strings.append(str(i))
+        if self.events:
+            strings.append(f'{"  " * counter}Events:\n')
+            for i in self.events:
+                strings.append(str(i))
+
+        return ''.join(strings)

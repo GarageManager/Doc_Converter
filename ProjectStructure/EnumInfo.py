@@ -5,7 +5,7 @@ from Tools.Functions import (is_access_modifier, change_access_modifier,
 from Tools.Regexes import NAME_REGEX
 from ProjectStructure.ObjectInfo import ObjectInfo
 
-SEPARATORS = (' ',)
+SEPARATORS = (' ', ':')
 
 
 class EnumInfo(ObjectInfo):
@@ -20,13 +20,7 @@ class EnumInfo(ObjectInfo):
 
     @parse_obj
     def get_enum_info(self, args):
-        if self.rest_of_string:
-            self.rest_of_string.append(
-                args.strings[args.str_num][args.pos + 1:]
-            )
-            self.rest_of_string.extend(args.strings[args.str_num + 1:])
-            return True
-        return False
+        pass
 
     def word_parser(self, word):
         if is_access_modifier(word):
@@ -37,11 +31,13 @@ class EnumInfo(ObjectInfo):
                 raise WrongExpressionException
         elif word == "static":
             self.is_static = True
-        elif NAME_REGEX.match(word):
-            self.name = word
-
-    # def add_fields(self, fields):
-    #     self.fields = fields
+        elif not self.name:
+            if NAME_REGEX.match(word):
+                self.name = word
+            else:
+                raise WrongExpressionException
+        else:
+            self.rest_of_string.append(word)
 
     def add_enum_field(self, obj):
         self.enum_fields.append(obj)

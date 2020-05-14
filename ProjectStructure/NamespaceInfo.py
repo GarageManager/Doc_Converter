@@ -1,9 +1,9 @@
 from ProjectStructure.ObjectInfo import ObjectInfo
 from Tools.Functions import parse_obj
-from Tools.Regexes import NAME_REGEX
+from Tools.Regexes import NAMESPACE_REGEX1, NAMESPACE_REGEX2
 from Tools.Exceptions import WrongExpressionException
 
-SEPARATORS = (' ', '.')
+SEPARATORS = (' ', )
 
 
 class NamespaceInfo(ObjectInfo):
@@ -25,10 +25,16 @@ class NamespaceInfo(ObjectInfo):
         if word == "namespace":
             if self.name:
                 raise WrongExpressionException
-        elif NAME_REGEX.match(word):
-            self.name.append(word)
+        elif not self.name:
+            if NAMESPACE_REGEX1.match(word):
+                self.name.append(word)
+            else:
+                raise WrongExpressionException
         else:
-            raise WrongExpressionException
+            if NAMESPACE_REGEX2.match(word):
+                self.name.append(word)
+            else:
+                raise WrongExpressionException
 
     def add_class(self, obj):
         self.classes.append(obj)

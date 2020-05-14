@@ -142,9 +142,14 @@ def get_generic_info(obj):
             new_name = obj.name[0][:j]
             if obj.name[0][j:]:
                 obj.generic_info.append(obj.name[0][j:])
-            obj.generic_info.extend(obj.name[0+1:])
+            obj.generic_info.extend(obj.name[1:])
             obj.name = new_name
             return
+    if len(obj.name) > 1 and obj.name[1][0] == '<':
+        new_name = obj.name[0]
+        obj.generic_info = obj.name[1:]
+        obj.name = new_name
+        return
     obj.name = obj.name[0]
 
 

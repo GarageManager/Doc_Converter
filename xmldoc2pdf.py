@@ -10,7 +10,10 @@ from Tools.Exceptions import WrongExtensionException
 
 def main():
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('--output', help='Output pdf file.')
+    arg_parser.add_argument(
+        '--output',
+        help='Output pdf file.',
+        default=sys.stdout)
     arg_parser.add_argument(
         '--encoding',
         help='Project or file encoding. Default: utf-8',
@@ -41,14 +44,9 @@ def main():
                 raise WrongExtensionException
 
 
-def test():
-    PDF('/Users/aliser/Downloads/NSimulator', 'dir', 'test.txt', 'utf-8')
-
-
 if __name__ == "__main__":
     # try:
-    test()
-    # main()
+        main()
     # except Exception as e:
     #     print(str(e), file=sys.stderr)
     #     raise SystemExit(1)

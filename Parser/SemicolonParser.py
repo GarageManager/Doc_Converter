@@ -1,6 +1,7 @@
 from ProjectStructure.MethodInfo import MethodInfo, MethodProperties
 from ProjectStructure.InterfaceInfo import InterfaceInfo
 from ProjectStructure.FieldInfo import FieldInfo
+from ProjectStructure.EventInfo import EventInfo
 from Tools.Enums import AccessModifiers
 from Tools.Regexes import NAME_REGEX, FUNC_REGEX
 from Tools.Functions import (change_access_modifier,
@@ -30,6 +31,7 @@ class SemicolonParser:
         self.is_static = False
         self.is_const = False
         self.is_delegate = False
+        self.is_event = False
         self.name = ''
         self.value = []
         self.data_type = []
@@ -57,6 +59,8 @@ class SemicolonParser:
 
                     if self.is_method:
                         return self.return_method(i, j + 1)
+                    if self.is_event:
+                        return self.return_event(self.strings)
                     if self.name:
                         return self.return_field(i, j)
                     start = j + 1
@@ -84,6 +88,9 @@ class SemicolonParser:
                     return self.return_field(i, j)
         raise NotAFieldException
 
+    def return_event(self, strings):
+        return EventInfo(self.father, strings, self.xml)
+
     def return_field(self, str_num, pos):
         if not self.name or not self.data_type:
             raise NotAFieldException
@@ -99,8 +106,8 @@ class SemicolonParser:
         try:
             method = MethodInfo(
                 self.father,
-                self.xml,
                 self.strings,
+                self.xml,
                 self.method_properties
             )
             return method
@@ -129,21 +136,16 @@ class SemicolonParser:
             self.is_readonly = True
             self.is_field = True
         elif word == 'new':
-            return
-        elif word in ['partial',
-                      'delegate',
-                      'extern',
-                      'virtual',
-                      'abstract',
-                      'override',
-                      'event']:
+            pass
+        elif word == 'event':
+            self.is_event = True
+        elif word in method_type.keys():
             if not self.is_field:
                 self.is_method = True
                 method_type[word] = True
                 self.method_properties = MethodProperties(
                     self.access_modifier, self.is_static, method_type
                 )
-                return
             else:
                 raise WrongExpressionException
         else:

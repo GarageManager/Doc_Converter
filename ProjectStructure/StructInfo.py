@@ -30,13 +30,7 @@ class StructInfo(ObjectInfo):
 
     @parse_obj
     def get_struct_info(self, args):
-        if self.name:
-            self.rest_of_string.append(
-                args.strings[args.str_num][args.pos + 1:]
-            )
-            self.rest_of_string.extend(args.strings[args.str_num + 1:])
-            return True
-        return False
+        pass
 
     def word_parser(self, word):
         if is_access_modifier(word):
@@ -51,11 +45,13 @@ class StructInfo(ObjectInfo):
             self.is_readonly = True
         elif word == "const":
             self.is_const = True
-        else:
+        elif not self.name:
             if NAME_REGEX.match(word):
                 self.name = word
             else:
                 raise WrongExpressionException
+        else:
+            self.rest_of_string.append(word)
 
     def add_class(self, obj):
         self.classes.append(obj)
@@ -85,3 +81,7 @@ class StructInfo(ObjectInfo):
 
     def add_property(self, obj):
         self.properties.append(obj)
+
+    def add_event(self, obj):
+        self.events.append(obj)
+

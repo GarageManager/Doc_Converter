@@ -7,3 +7,4 @@ from ProjectStructure.ClassInfo import ClassInfo
 from ProjectStructure.FieldInfo import FieldInfo
 from ProjectStructure.EnumInfo import EnumInfo
 from ProjectStructure.CsFileInfo import FileInfo
+from ProjectStructure.EventInfo import EventInfo
