@@ -15,7 +15,7 @@ class ClassInfo(ObjectInfo):
         self.is_abstract = False
         self.is_partial = False
         self.is_sealed = False
-        self.rest_of_string = []
+        self.inheritance = []
         self.generic_info = []
 
         self._angle_brackets_count = 0
@@ -24,12 +24,12 @@ class ClassInfo(ObjectInfo):
 
     @parse_obj
     def get_class_info(self, args):
-        if self.rest_of_string:
+        if self.inheritance:
             if args.strings[args.str_num][args.pos + 1:]:
-                self.rest_of_string.append(
+                self.inheritance.append(
                     args.strings[args.str_num][args.pos + 1:]
                 )
-            self.rest_of_string.extend(args.strings[args.str_num + 1:])
+            self.inheritance.extend(args.strings[args.str_num + 1:])
             return True
         return False
 
@@ -53,7 +53,7 @@ class ClassInfo(ObjectInfo):
                 word, self.name, self._angle_brackets_count
             )
             if pos < len(word):
-                self.rest_of_string.append(word[pos:])
+                self.inheritance.append(word[pos:])
 
     def add_class(self, obj):
         self.classes.append(obj)
@@ -81,3 +81,6 @@ class ClassInfo(ObjectInfo):
 
     def add_event(self, obj):
         self.events.append(obj)
+
+    def add_constructor(self, obj):
+        self.constructors.append(obj)

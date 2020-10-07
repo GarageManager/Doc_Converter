@@ -1,5 +1,8 @@
+import os
+import sys
+
 from Parser.SemicolonParser import SemicolonParser
-from Tools.Classes import Bracket, StateArgs
+from Tools.Classes import Bracket
 from Tools.Functions import parse_quotes, parse_brackets, is_field_checking
 from Tools.Exceptions import (NotAMethodException,
                               NotAPropertyException,
@@ -17,16 +20,14 @@ ENUM_BRACKETS = {
 }
 
 
-def parse(path, encoding, std=None):
-    parser = Parser()
-    if std and not path:
-        return parser.parse_data('None', std)
-    with open(path, mode="r", errors='replace',
-              encoding=encoding) as file:
-        return parser.parse_data(path, file)
+class StateArgs:
+    def __init__(self, char, pos, line):
+        self.char = char
+        self.pos = pos
+        self.line = line
 
 
-class Parser:
+class CsParser:
     def __init__(self):
         self.file_info = None
         self.curr_elem = None
@@ -38,36 +39,67 @@ class Parser:
         self.end_of_line = False
         self.line_number = 0
         self.current_state = self.default_state
+        self.previous_state = None
         self.skip_text = False
+        # self.encoding = None
 
-    def parse_data(self, name, file):
-        self.file_info = PS.FileInfo(name)
+    def parse(self, path, encodings):
+        if sys.stdin and not path:
+            buffer = sys.stdin.buffer.read()
+            for encoding in encodings:
+                try:
+                    data = buffer.decode(encoding)
+                    return self.parse_file_data('StdIn', data, is_std=True)
+                except UnicodeDecodeError:
+                    pass
+            else:
+                data = buffer.decode(encodings[0], errors='replace')
+                return self.parse_file_data('StdIn', data, is_std=True)
+
+        for encoding in encodings:
+            try:
+                with open(path, mode="r", encoding=encoding) as file:
+                    return self.parse_file_data(path, file)
+            except UnicodeDecodeError:
+                pass
+        else:
+            with open(path, mode="r", encoding=encodings[0], errors='replace')\
+                    as file:
+                return self.parse_file_data(path, file)
+
+    def parse_file_data(self, name, file, is_std=False):
+        self.file_info = PS.FileInfo(os.path.basename(name))
         self.curr_elem = self.file_info
-        line = file.readline()
 
-        if line[0] == b'\xef\xbb\xbf'.decode('utf-8'):
-            line = line[1:]
-
-        while line:
-            self.parse_line(line)
+        if not is_std:
             line = file.readline()
+            while line:
+                self.parse_line(line)
+                line = file.readline()
+        else:
+            lines = file.split('\n')
+            for line in lines:
+                self.parse_line(line)
 
         if self.bracket.count != 0:
             raise MissingBracketException()
         else:
-            return [self.file_info, ]
+            return self.file_info
 
     def parse_line(self, line):
         self.line_number += 1
         line = line.strip()
         if not line:
             return
+        if line[0] == b'\xef\xbb\xbf'.decode('utf-8'):
+            line = line[1:]
         if line[0] == '#':
             return
         # if line contains /// then it's xml
         if len(line) > 2 and line[:3] == '///':
             self.xml.append(line[3: len(line)])
         else:
+            state_args = StateArgs('', 0, '')
             i = 0
             self.end_of_line = False
             while i < len(line):
@@ -80,6 +112,7 @@ class Parser:
                     if line[i+1] == '*':
                         self.parse_comment(line, i)
                         self.skip_text = True
+                        self.previous_state = self.current_state
                         self.current_state = self.in_comment_state
 
                 # if char == \" or \' then in we should skip all text
@@ -98,11 +131,15 @@ class Parser:
                         )
                 ):
                     self.bracket = Bracket('[', ']', 1)
+                    self.previous_state = self.current_state
                     self.current_state = self.skip_text_state
                     self.skip_text = True
                     i += 1
                 try:
-                    self.current_state(StateArgs(line[i], i, line))
+                    state_args.char = line[i]
+                    state_args.pos = i
+                    state_args.line = line
+                    self.current_state(state_args)
                 except (NotAFieldException, NotAMethodException):
                     self.previous_lines = []
                     self.previous_pos = i + 1
@@ -119,9 +156,9 @@ class Parser:
                 self.previous_pos = 0
 
     # Elements always end with ';' or '{'
-    # If ';' then it may be field, delegate or method without body
-    # If { then it may be class, enum, namespace, interface, struct, method,
-    # property or it's an unfinished field
+    # If ';' then it may be a field, delegate or method without body
+    # If '{' then it may be a class, enum, namespace, interface, struct,
+    # method, property or it's an unfinished field
     def default_state(self, args):
         if args.char == ';':
             self.end_of_line_checking(args.pos, args.line)
@@ -130,6 +167,7 @@ class Parser:
                     self.curr_elem, self.previous_lines, self.xml
                 ).parse()
             )
+            self.xml = []
             self.previous_lines = []
             self.previous_pos = args.pos + 1
         elif args.char == '{':
@@ -140,7 +178,8 @@ class Parser:
                 self.bracket.count += 1
                 self.current_state = self.in_field_state
             else:
-                self.parse_element(self.xml)
+                self.parse_element()
+                self.xml = []
                 self.previous_lines = []
         elif args.char == '}':
             if self.curr_elem is not None:
@@ -159,17 +198,14 @@ class Parser:
         )
         if self.bracket.count == 0:
             self.previous_pos = args.pos + 1
-            if type(self.curr_elem) == PS.EnumInfo:
-                self.current_state = self.in_enum_state
-            else:
-                self.current_state = self.default_state
+            self.current_state = self.previous_state
             self.skip_text = False
 
     # Skipping text until '*/'
     def in_comment_state(self, args):
         if (args.pos != len(args.line) - 1 and
                 args.line[args.pos:args.pos+2] == '*/'):
-            self.current_state = self.default_state
+            self.current_state = self.previous_state
             self.previous_pos = args.pos + 2
             self.skip_text = False
 
@@ -189,110 +225,18 @@ class Parser:
                 self.current_state = self.default_state
         self.previous_pos = args.pos + 1
 
-    def property_begin_state(self, args):
-        get_match = Regexes.GET_REGEX.search(args.line[args.pos:])
-        set_match = Regexes.SET_REGEX.search(args.line[args.pos:])
-
-        if get_match or set_match:
-            self.curr_elem.get_set_flag = True
-            self.previous_pos = args.pos
-            if (not get_match or
-                    set_match and set_match.start() < get_match.start()):
-                self.current_state = self.property_set_state
-                self.previous_pos += set_match.end()
-            elif (not set_match or
-                  get_match and get_match.start() < set_match.start()):
-                self.current_state = self.property_get_state
-                self.previous_pos += get_match.end()
-        else:
-            raise WrongExpressionException
-
-    def property_get_state(self, args):
-        if args.pos < self.previous_pos:
-            return
-        if args.char == '{':
-            self.bracket.count += 1
-        elif args.char == '}':
-            self.bracket.count -= 1
-            if self.bracket.count == 0:
-                if args.line[self.previous_pos:args.pos]:
-                    self.previous_lines.append(
-                        args.line[self.previous_pos:args.pos]
-                    )
-                self.curr_elem.add_get_value(self.previous_lines)
-                self.property_to_default(args.pos)
-        else:
-            self.parse_property_body(args, 's')
-
-    def property_set_state(self, args):
-        if args.pos < self.previous_pos:
-            return
-        if args.char == '{':
-            self.bracket.count += 1
-        elif args.char == '}':
-            self.bracket.count -= 1
-            if self.bracket.count == 0:
-                if args.line[self.previous_pos:args.pos]:
-                    self.previous_lines.append(
-                        args.line[self.previous_pos:args.pos]
-                    )
-                self.curr_elem.add_set_value(self.previous_lines)
-                self.property_to_default(args.pos)
-        else:
-            self.parse_property_body(args, 'g')
-
-    def property_full_state(self, args):
-        if args.pos < self.previous_pos:
-            return
-        if args.char == '{':
-            self.bracket.count += 1
-        elif args.char == '}':
-            self.bracket.count -= 1
-            if self.bracket.count == 0:
-                if args.line[self.previous_pos:args.pos]:
-                    self.previous_lines.append(
-                        args.line[self.previous_pos:args.pos]
-                    )
-                self.curr_elem.add_value(self.previous_lines)
-                self.property_to_default(args.pos)
-
-    def parse_property_body(self, args, g_or_s):
-        if self.bracket.count == 1:
-            if (args.char == ' ' or
-                    args.char == ';' or
-                    args.pos == len(args.line) - 1):
-                self.curr_elem.get_set_flag = True
-            elif (
-                    self.curr_elem.get_set_flag and
-                    args.char == g_or_s and
-                    len(args.line) - args.pos > 2 and
-                    args.line[args.pos + 1] == 'e' and
-                    args.line[args.pos + 2] == 't' and
-                    (len(args.line) - 3 == args.pos or
-                     args.line[args.pos + 3] == '{' or
-                     args.line[args.pos + 3] == ' ' or
-                     args.line[args.pos + 3] == ';')
-            ):
-                if args.line[self.previous_pos:args.pos]:
-                    self.previous_lines.append(
-                        args.line[self.previous_pos:args.pos]
-                    )
-                if args.char == 'g':
-                    self.curr_elem.add_set_value(self.previous_lines)
-                else:
-                    self.curr_elem.add_get_value(self.previous_lines)
-                self.previous_lines = []
-                self.previous_pos = args.pos + 3
-                self.current_state = self.property_full_state
-            else:
-                self.curr_elem.get_set_flag = False
-
-    def property_to_default(self, pos):
-        self.previous_lines = []
-        self.previous_pos = pos + 1
-        self.current_state = self.default_state
-        self.curr_elem.father.add_property(self.curr_elem)
-        self.curr_elem = self.curr_elem.father
+    def in_property_state(self, args):
+        self.curr_elem.parse_property_body(args)
+        if self.curr_elem.curly_brackets_count == 0:
+            if (not self.curr_elem.has_get_value
+                    and not self.curr_elem.has_set_value):
+                raise WrongExpressionException
+            self.curr_elem.father.add_property(self.curr_elem)
+            self.bracket.count = 0
+            self.previous_lines = []
+            self.previous_pos = args.pos + 1
+            self.current_state = self.default_state
+            self.curr_elem = self.curr_elem.father
 
     # Enum items ends with ','
     def in_enum_state(self, args):
@@ -312,52 +256,63 @@ class Parser:
                 self.previous_lines.append(
                     args.line[self.previous_pos:args.pos]
                 )
-                self.curr_elem.add_enum_field(list(self.previous_lines))
+                self.curr_elem.add_enum_field(self.xml, self.previous_lines)
                 self.previous_lines = []
+                self.xml = []
                 self.previous_pos = args.pos + 1
             elif args.char == '}':
                 line = args.line[self.previous_pos:args.pos].strip()
                 if line:
                     self.previous_lines.append(line)
                 if self.previous_lines:
-                    self.curr_elem.add_enum_field(self.previous_lines)
+                    self.curr_elem.add_enum_field(
+                        self.xml, self.previous_lines
+                    )
+                self.xml = []
                 self.previous_lines = []
                 self.previous_pos = args.pos + 1
                 self.curr_elem = self.curr_elem.father
                 self.current_state = self.default_state
 
-    def parse_element(self, xml):
+    def parse_element(self):
         match = False
         t = None
 
         for line in self.previous_lines:
             if Regexes.IS_CLASS_REGEX.search(line):
-                t = PS.ClassInfo(self.curr_elem, self.previous_lines, xml)
+                t = PS.ClassInfo(self.curr_elem, self.previous_lines, self.xml)
                 self.curr_elem.add_class(t)
                 match = True
             elif Regexes.IS_INTERFACE_REGEX.search(line):
-                t = PS.InterfaceInfo(self.curr_elem, self.previous_lines, xml)
+                t = PS.InterfaceInfo(
+                    self.curr_elem, self.previous_lines, self.xml
+                )
                 self.curr_elem.add_interface(t)
                 match = True
             elif Regexes.IS_ENUM_REGEX.search(line):
-                t = PS.EnumInfo(self.curr_elem, self.previous_lines, xml)
+                t = PS.EnumInfo(self.curr_elem, self.previous_lines, self.xml)
                 self.curr_elem.add_enum(t)
                 self.current_state = self.in_enum_state
                 match = True
             elif Regexes.IS_NAMESPACE_REGEX.search(line):
-                t = PS.NamespaceInfo(self.curr_elem, self.previous_lines, xml)
+                t = PS.NamespaceInfo(
+                    self.curr_elem, self.previous_lines, self.xml
+                )
                 self.curr_elem.add_namespace(t)
                 match = True
             elif Regexes.IS_EVENT_REGEX.search(line):
                 self.curr_elem.add_event(
-                    PS.EventInfo(self.curr_elem, self.previous_lines, xml)
+                    PS.EventInfo(self.curr_elem, self.previous_lines, self.xml)
                 )
                 self.bracket = Bracket('{', '}', 1)
                 self.skip_text = True
+                self.previous_state = self.current_state
                 self.current_state = self.skip_text_state
                 return
             elif Regexes.IS_STRUCT_REGEX.search(line):
-                t = PS.StructInfo(self.curr_elem, self.previous_lines, xml)
+                t = PS.StructInfo(
+                    self.curr_elem, self.previous_lines, self.xml
+                )
                 self.curr_elem.add_struct(t)
                 match = True
             if match:
@@ -367,11 +322,16 @@ class Parser:
             if self.previous_lines[-1][-1] == ')':
                 self.bracket = Bracket('{', '}', 1)
                 self.skip_text = True
+                self.previous_state = self.current_state
                 self.current_state = self.skip_text_state
                 try:
-                    self.curr_elem.add_method(
-                        PS.MethodInfo(self.curr_elem, self.previous_lines, xml)
-                    )
+                    method = PS.MethodInfo(
+                            self.curr_elem, self.previous_lines, self.xml
+                        )
+                    if method.is_constructor:
+                        self.curr_elem.add_constructor(method)
+                    else:
+                        self.curr_elem.add_method(method)
                 except NotAMethodException:  # If not a method then just skip
                     pass
                 return
@@ -381,10 +341,11 @@ class Parser:
                 self.curr_elem = PS.PropertyInfo(
                     self.curr_elem, self.previous_lines, self.xml
                 )
-                self.current_state = self.property_begin_state
+                self.current_state = self.in_property_state
             except NotAPropertyException:
                 self.bracket = Bracket('{', '}', 1)
                 self.skip_text = True
+                self.previous_state = self.current_state
                 self.current_state = self.skip_text_state
 
     def parse_comment(self, line, position):
@@ -397,8 +358,7 @@ class Parser:
 
     def end_of_line_checking(self, position, line):
         if (position != len(line) - 1 and  # If not end of line
-                position != 0 and
-                self.previous_pos != position):
+                position != 0 and self.previous_pos != position):
             self.previous_lines.append(
                 line[self.previous_pos:position].strip()
             )

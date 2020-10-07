@@ -1,7 +1,7 @@
 from Tools.Exceptions import MissingQuoteException
 from Tools.Regexes import IS_FIELD_REGEX, DATA_TYPE_REGEX1, DATA_TYPE_REGEX2
 from Tools.Enums import AccessModifiers
-from Tools.Classes import FuncArgs
+from Tools.Classes import FuncArgs, TextParams
 from Tools.Exceptions import WrongExpressionException
 
 ACCESS_MODIFIERS_DICT = {
@@ -106,24 +106,39 @@ def change_access_modifier(curr_acc_mod, string):
     return curr_acc_mod
 
 
-def data_type_parser(word, data_type_string, brackets_count):
+def access_modifier_to_string(modifier):
+    if modifier == AccessModifiers.Protected:
+        return 'protected '
+    if modifier == AccessModifiers.Public:
+        return 'public '
+    if modifier == AccessModifiers.Private:
+        return 'private '
+    if modifier == AccessModifiers.PrivateProtected:
+        return 'private protected '
+    if modifier == AccessModifiers.ProtectedInternal:
+        return 'protected internal '
+    if modifier == AccessModifiers.Internal:
+        return 'internal '
+
+
+def data_type_parser(word, data_type_strings, brackets_count):
     previous_index = 0
     if (
-            not data_type_string and
+            not data_type_strings and
             DATA_TYPE_REGEX1.match(word) or
             DATA_TYPE_REGEX2.match(word) and
-            (brackets_count != 0 or data_type_string and
+            (brackets_count != 0 or data_type_strings and
              (word[0] == "." or
-              data_type_string[-1][-1] == "." or
+              data_type_strings[-1][-1] == "." or
               word[0] == "<" and
-              data_type_string[-1][-1] != ">"))
+              data_type_strings[-1][-1] != ">"))
     ):
         for i in range(len(word)):
             if brackets_count != 0:
                 brackets_count = parse_brackets("<", ">", word[i],
                                                 brackets_count)
                 if brackets_count == 0:
-                    data_type_string.append(word[previous_index: i + 1])
+                    data_type_strings.append(word[previous_index: i + 1])
                     if i + 1 < len(word) and word[i + 1] == ".":
                         previous_index = i + 1
                     else:
@@ -131,7 +146,7 @@ def data_type_parser(word, data_type_string, brackets_count):
             else:
                 if word[i] == "<":
                     brackets_count += 1
-        data_type_string.append(word[previous_index:])
+        data_type_strings.append(word[previous_index:])
         return len(word), brackets_count
     return 0, brackets_count
 
@@ -157,3 +172,127 @@ def is_operator(word):
     if word in OPERATORS:
         return True
     return False
+
+
+def rgb_to_non_linear(red, green, blue):
+    return f'{round(red / 255, 2)} {round(green / 255, 2)} ' \
+           f'{round(blue / 255, 2)}'
+
+
+def split_word_to_width(line_width, remaining_line_width, word, font, fpdf,
+                        page_width):
+    lines = []
+    remaining_width = remaining_line_width
+    prev_index = 0
+    char_width = get_string_width('k', fpdf, page_width, font.name, font.size)
+    curr_index = remaining_width // char_width
+    if curr_index >= len(word) - 1:
+        curr_index = len(word) // 2
+
+    while curr_index < len(word) - 1:
+        width = get_string_width(
+            word[prev_index:curr_index], fpdf, page_width, font.name, font.size
+        )
+        if width >= remaining_width:
+            for j in range(curr_index, prev_index, -1):
+                width = get_string_width(
+                    word[prev_index:j], fpdf, page_width, font.name, font.size
+                )
+                if width < remaining_width:
+                    lines.append(
+                        TextParams(word[prev_index:j], font, width=width)
+                    )
+                    prev_index = j
+                    curr_index = min(
+                        prev_index + line_width // char_width, len(word)
+                    )
+                    break
+        else:
+            width = get_string_width(
+                word[prev_index:], fpdf, page_width, font.name, font.size
+            )
+            if width < remaining_width:
+                lines.append(TextParams(word[prev_index:], font, width=width))
+                prev_index = len(word)
+                curr_index = len(word)
+            else:
+                for j in range(curr_index + 1, len(word)):
+                    width = get_string_width(
+                        word[prev_index:j+1], fpdf, page_width, font.name,
+                        font.size
+                    )
+                    if width >= remaining_width:
+                        lines.append(TextParams(
+                            word[prev_index:j], font, width=width
+                        ))
+                        prev_index = j
+                        curr_index = min(
+                            prev_index + line_width // char_width,
+                            len(word)
+                        )
+                        break
+        remaining_width = line_width
+
+    if prev_index != len(word):
+        word = word[prev_index:]
+        lines.append(
+            TextParams(
+                word,
+                font,
+                get_string_width(
+                    word, fpdf, page_width, font.name, font.size
+                )
+            )
+        )
+    return lines
+
+
+def escape(s):
+    return s.replace('\\', '\\\\').replace(')', '\\)').replace('(', '\\(').\
+        replace('\r', '\\r')
+
+
+def format_data_type(data_type):
+    if not data_type:
+        return []
+
+    res = []
+    formatted_data = []
+    for string in data_type:
+        start_pos = 0
+        for i in range(1, len(string)):
+            if string[i] == ',':
+                formatted_data.append(string[start_pos:i])
+                formatted_data.append(', ')
+                res.extend(formatted_data)
+                start_pos = i + 1
+                formatted_data = []
+            elif not string[i].isspace() and string[i - 1].isspace():
+                if string[start_pos:i].strip():
+                    formatted_data.append(string[start_pos:i].strip())
+                start_pos = i
+        if string[start_pos:]:
+            formatted_data.append(f'{string[start_pos:]} ')
+    res.extend(formatted_data)
+    return res
+
+
+def format_argument(arg):
+    data_type = []
+    data_type.extend(arg[:-1])
+    name = ''
+    for i in range(len(arg[-1]) - 1, 0, -1):
+        if arg[-1][i].isspace():
+            name = arg[-1][i+1:]
+            data_type.append(arg[-1][:i+1])
+            break
+
+    return format_data_type(data_type), name
+
+
+def get_string_width(string, fpdf, page_width, font_name='', font_size=0):
+    if font_name and font_size:
+        fpdf.set_font(font_name, size=font_size)
+    string_width = fpdf.get_string_width(string)
+    multiplier = 2.9 - 2.9 * (string_width / (page_width * 10))
+    return int(string_width * multiplier)

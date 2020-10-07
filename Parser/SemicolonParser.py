@@ -1,7 +1,5 @@
-from ProjectStructure.MethodInfo import MethodInfo, MethodProperties
-from ProjectStructure.InterfaceInfo import InterfaceInfo
-from ProjectStructure.FieldInfo import FieldInfo
-from ProjectStructure.EventInfo import EventInfo
+import ProjectStructure
+from ProjectStructure.MethodInfo import MethodProperties
 from Tools.Enums import AccessModifiers
 from Tools.Regexes import NAME_REGEX, FUNC_REGEX
 from Tools.Functions import (change_access_modifier,
@@ -10,7 +8,7 @@ from Tools.Functions import (change_access_modifier,
 from Tools.Exceptions import (NotAMethodException,
                               NotAFieldException,
                               WrongExpressionException)
-
+# TODO
 method_type = {
     'delegate': False,
     'partial': False,
@@ -18,6 +16,7 @@ method_type = {
     'virtual': False,
     'extern': False,
 }
+# TODO
 
 
 class SemicolonParser:
@@ -43,7 +42,7 @@ class SemicolonParser:
         for i in method_type:
             method_type[i] = False
 
-        if isinstance(self.father, InterfaceInfo):
+        if isinstance(self.father, ProjectStructure.InterfaceInfo):
             self.method_properties = MethodProperties(
                 self.access_modifier, self.is_static, method_type
             )
@@ -89,7 +88,7 @@ class SemicolonParser:
         raise NotAFieldException
 
     def return_event(self, strings):
-        return EventInfo(self.father, strings, self.xml)
+        return ProjectStructure.EventInfo(self.father, strings, self.xml)
 
     def return_field(self, str_num, pos):
         if not self.name or not self.data_type:
@@ -104,7 +103,7 @@ class SemicolonParser:
     def return_method(self, str_num, pos):
         self.method_properties.pos = [str_num, pos]
         try:
-            method = MethodInfo(
+            method = ProjectStructure.MethodInfo(
                 self.father,
                 self.strings,
                 self.xml,
@@ -164,7 +163,7 @@ class SemicolonParser:
                 self.name = word[pos:]
 
     def get_field_info(self):
-        return FieldInfo(
+        return ProjectStructure.FieldInfo(
             self.father,
             self.xml,
             self.access_modifier,

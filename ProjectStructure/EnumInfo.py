@@ -1,3 +1,4 @@
+from Parser.XmlParser import from_string
 from Tools.Enums import AccessModifiers
 from Tools.Exceptions import WrongExpressionException
 from Tools.Functions import (is_access_modifier, change_access_modifier,
@@ -14,7 +15,7 @@ class EnumInfo(ObjectInfo):
         self.access_modifier = AccessModifiers.Empty
         self.is_static = False
         self.enum_fields = []
-        self.rest_of_string = []
+        self.inheritance = []
 
         self.get_enum_info(enum_str, SEPARATORS)
 
@@ -37,7 +38,7 @@ class EnumInfo(ObjectInfo):
             else:
                 raise WrongExpressionException
         else:
-            self.rest_of_string.append(word)
+            self.inheritance.append(word)
 
-    def add_enum_field(self, obj):
-        self.enum_fields.append(obj)
+    def add_enum_field(self, xml, obj):
+        self.enum_fields.append((from_string(xml), obj))

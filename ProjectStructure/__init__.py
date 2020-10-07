@@ -2,7 +2,7 @@ from ProjectStructure.InterfaceInfo import InterfaceInfo
 from ProjectStructure.NamespaceInfo import NamespaceInfo
 from ProjectStructure.PropertyInfo import PropertyInfo
 from ProjectStructure.StructInfo import StructInfo
-from ProjectStructure.MethodInfo import MethodInfo
+from ProjectStructure.MethodInfo import MethodInfo, Method
 from ProjectStructure.ClassInfo import ClassInfo
 from ProjectStructure.FieldInfo import FieldInfo
 from ProjectStructure.EnumInfo import EnumInfo

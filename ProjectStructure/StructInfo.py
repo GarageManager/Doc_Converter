@@ -2,7 +2,7 @@ from ProjectStructure.ObjectInfo import ObjectInfo
 from Tools.Enums import AccessModifiers
 from Tools.Exceptions import WrongExpressionException
 from Tools.Functions import (change_access_modifier, is_access_modifier,
-                             parse_obj)
+                             parse_obj, get_generic_info)
 from Tools.Regexes import NAME_REGEX
 
 SEPARATORS = (' ', ':')
@@ -15,18 +15,11 @@ class StructInfo(ObjectInfo):
         self.is_static = False
         self.is_readonly = False
         self.is_const = False
-        self.rest_of_string = []
-
-        self.classes = []
-        self.interfaces = []
-        self.structs = []
-        self.enums = []
-        self.fields = []
-        self.methods = []
-        self.delegates = []
-        self.properties = []
+        self.generic_info = []
 
         self.get_struct_info(struct_str, SEPARATORS)
+        get_generic_info(self)
+        self.name = ''.join(self.name)
 
     @parse_obj
     def get_struct_info(self, args):
@@ -47,17 +40,14 @@ class StructInfo(ObjectInfo):
             self.is_const = True
         elif not self.name:
             if NAME_REGEX.match(word):
-                self.name = word
+                self.name.append(word)
             else:
                 raise WrongExpressionException
         else:
-            self.rest_of_string.append(word)
+            self.inheritance.append(word)
 
     def add_class(self, obj):
         self.classes.append(obj)
-
-    def add_namespace(self, obj):
-        raise WrongExpressionException
 
     def add_enum(self, obj):
         self.enums.append(obj)
@@ -85,3 +75,5 @@ class StructInfo(ObjectInfo):
     def add_event(self, obj):
         self.events.append(obj)
 
+    def add_constructor(self, obj):
+        self.constructors.append(obj)

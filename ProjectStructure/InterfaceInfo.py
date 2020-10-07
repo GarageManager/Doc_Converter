@@ -12,16 +12,9 @@ class InterfaceInfo(ObjectInfo):
         super().__init__(father, xml)
         self.access_modifier = AccessModifiers.Empty
         self.is_partial = False
-        self.rest_of_string = []
+        self.is_static = False
+        self.inheritance = []
         self.generic_info = []
-
-        self.classes = []
-        self.interfaces = []
-        self.structs = []
-        self.enums = []
-        self.methods = []
-        self.delegates = []
-        self.properties = []
 
         self._angle_brackets_count = 0
         self.get_interface_info(interface_str, SEPARATORS)
@@ -29,11 +22,11 @@ class InterfaceInfo(ObjectInfo):
 
     @parse_obj
     def get_interface_info(self, args):
-        if self.rest_of_string:
-            self.rest_of_string.append(
+        if self.inheritance:
+            self.inheritance.append(
                 args.strings[args.str_num][args.pos + 1:]
             )
-            self.rest_of_string.extend(args.strings[args.str_num + 1:])
+            self.inheritance.extend(args.strings[args.str_num + 1:])
             return True
         return False
 
@@ -51,7 +44,7 @@ class InterfaceInfo(ObjectInfo):
                 word, self.name, self._angle_brackets_count
             )
             if pos < len(word):
-                self.rest_of_string.append(word[pos:])
+                self.inheritance.append(word[pos:])
 
     def add_class(self, obj):
         self.classes.append(obj)
@@ -76,3 +69,6 @@ class InterfaceInfo(ObjectInfo):
 
     def add_event(self, obj):
         self.events.append(obj)
+
+    def add_constructor(self, obj):
+        self.constructors.append(obj)

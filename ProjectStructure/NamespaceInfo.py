@@ -9,16 +9,11 @@ SEPARATORS = (' ', )
 class NamespaceInfo(ObjectInfo):
     def __init__(self, father, namespace_strings, xml=None):
         super().__init__(father, xml)
-        self.classes = []
-        self.interfaces = []
-        self.structs = []
-        self.enums = []
-        self.delegates = []
-
-        self.get_namespace_info(namespace_strings, SEPARATORS)
+        self._get_namespace_info(namespace_strings, SEPARATORS)
+        self.name = ''.join(self.name)
 
     @parse_obj
-    def get_namespace_info(self, args):
+    def _get_namespace_info(self, args):
         pass
 
     def word_parser(self, word):
@@ -40,7 +35,7 @@ class NamespaceInfo(ObjectInfo):
         self.classes.append(obj)
 
     def add_namespace(self, obj):
-        raise WrongExpressionException
+        self.namespaces.append(obj)
 
     def add_enum(self, obj):
         self.enums.append(obj)

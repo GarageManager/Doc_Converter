@@ -1,4 +1,4 @@
-from ProjectStructure.ObjectInfo import ObjectInfo
+from ProjectStructure.MethodInfo import Method
 from Tools.Enums import AccessModifiers
 from Tools.Exceptions import NotAPropertyException, WrongExpressionException
 from Tools.Functions import (change_access_modifier, is_access_modifier,
@@ -8,15 +8,17 @@ from Tools.Regexes import PROPERTY_NAME_REGEX1, PROPERTY_NAME_REGEX2
 SEPARATORS = (' ',)
 
 
-class EventInfo(ObjectInfo):
+class EventInfo(Method):
     def __init__(self, father, event_str, xml):
         super().__init__(father, xml)
         self.data_type = []
         self.access_modifier = AccessModifiers.Empty
         self.is_static = False
+        self.is_delegate = False
 
         self.angle_brackets_count = 0
         self.get_event_info(event_str, SEPARATORS)
+        self.name = ''.join(self.name)
 
     @parse_obj
     def get_event_info(self, args):

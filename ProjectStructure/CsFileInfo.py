@@ -5,13 +5,6 @@ class FileInfo(ObjectInfo):
     def __init__(self, filename):
         super().__init__()
         self.name = filename
-        self.namespaces = []
-        self.modules = []
-        self.enums = []
-        self.classes = []
-        self.interfaces = []
-        self.structs = []
-        self.delegates = []
 
     def add_class(self, obj):
         self.classes.append(obj)

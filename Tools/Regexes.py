@@ -24,3 +24,8 @@ IS_FIELD_REGEX = re.compile(r'[\w ]*(=)(?![^\w ])')
 # property names can only contains letters, digits and '.,: _<>[]'
 PROPERTY_NAME_REGEX1 = re.compile(r'^[a-zA-Z_][\w.,: _<>\[\]]*$')
 PROPERTY_NAME_REGEX2 = re.compile(r'^[a-zA-Z_., <>\[\]][\w.,: _<>\[\]]*$')
+
+GET_FONTS_INFO = re.compile(r'(5 0 obj[\w\W]*)(?:2 0 obj)')
+GET_OBJECTS = re.compile(r'((?<=\w 0 obj\s)[\w\W]*?)\s*endobj|(\w+ 0 obj)')
+
+XML_SPACE_REPLACE = re.compile(r'\s+')

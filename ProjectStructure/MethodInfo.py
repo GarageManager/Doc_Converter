@@ -1,12 +1,31 @@
 from ProjectStructure.ObjectInfo import ObjectInfo
 from Tools.Enums import AccessModifiers
 from Tools.Functions import (data_type_parser, is_operator, parse_brackets,
-                             change_access_modifier, is_access_modifier)
+                             change_access_modifier, is_access_modifier,
+                             get_generic_info)
 from Tools.Classes import Bracket
 from Tools.Exceptions import NotAMethodException, WrongExpressionException
 from ProjectStructure.ClassInfo import ClassInfo
 from ProjectStructure.StructInfo import StructInfo
 from Tools.Regexes import DATA_TYPE_REGEX1, DATA_TYPE_REGEX2
+
+
+class Method(ObjectInfo):
+    def __init__(self, father, xml):
+        super().__init__(father, xml)
+        self.is_delegate = False
+        self.is_partial = False
+        self.is_extern = False
+        self.is_virtual = False
+        self.is_abstract = False
+        self.args = []
+        self.is_override = False
+        self.is_constructor = False
+        self.is_destructor = False
+        self.inheritance = []
+        self.is_operator = False
+        self.is_event = False
+        self.is_async = False
 
 
 class MethodProperties:
@@ -37,7 +56,7 @@ class MethodProperties:
         self.pos = pos
 
 
-class MethodInfo(ObjectInfo):
+class MethodInfo(Method):
     def __init__(self, father, method_str, xml, properties=MethodProperties()):
         super().__init__(father, xml)
         self.data_type = []
@@ -49,19 +68,12 @@ class MethodInfo(ObjectInfo):
             self.is_extern = properties.is_extern
             self.is_virtual = properties.is_virtual
             self.is_abstract = properties.is_abstract
-        self.args = []
-        self.is_override = False
-        self.is_constructor = False
-        self.is_destructor = False
-        self.rest_of_string = []
-        self.is_operator = False
-        self.is_event = False
-        self.is_async = False
 
         self._angle_brackets_count = 0
-        self.parse_args = False
+        self._parse_args = False
 
         self.get_method_info(method_str, properties.pos)
+        get_generic_info(self)
 
     def get_method_info(self, strings, pos):
         brackets = {
@@ -76,7 +88,7 @@ class MethodInfo(ObjectInfo):
             j = pos[1] if pos[0] == i else 0
             start = j
             while j < len(strings[i]):
-                if self.parse_args:
+                if self._parse_args:
                     if bracket.count == 0:
                         if strings[i][j] in brackets:
                             bracket = brackets[strings[i][j]]
@@ -88,8 +100,8 @@ class MethodInfo(ObjectInfo):
                                 self.args.append(arg)
 
                             if strings[i][j + 1:]:
-                                self.rest_of_string.append(strings[i][j + 1:])
-                            self.rest_of_string.extend(strings[i + 1:])
+                                self.inheritance.append(strings[i][j + 1:])
+                            self.inheritance.extend(strings[i + 1:])
                             return
                         if strings[i][j] == ',':
                             if start != j:
@@ -109,15 +121,15 @@ class MethodInfo(ObjectInfo):
                     if strings[i][j] == ' ' or strings[i][j] == '(':
                         if start != j:
                             self.word_parser(strings[i][start:j].strip())
-                        if strings[i][j] == '(':  # if char == ( then
+                        if strings[i][j] == '(':  # if char is '(' then
                             if not self.name:     # starting to parse args
                                 raise NotAMethodException
-                            self.parse_args = True
+                            self._parse_args = True
                         start = j + 1
                 j += 1
 
             if start != j:
-                if self.parse_args:
+                if self._parse_args:
                     arg.append(strings[i][start:j])
                 else:
                     self.word_parser(strings[i][start:].strip())
@@ -160,8 +172,6 @@ class MethodInfo(ObjectInfo):
             self.is_event = True
         elif word == 'async':
             self.is_async = True
-        elif word == 'new':
-            return
         else:
             if self.is_operator and is_operator(word):
                 self.name.append(word)
